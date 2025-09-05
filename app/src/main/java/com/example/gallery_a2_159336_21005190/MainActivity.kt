@@ -98,7 +98,9 @@ class MainActivity : ComponentActivity() {
         if(ids.isEmpty()){
             Text("No Images Found")
         } else{
-            GalleryGrid(ids)
+            //GalleryGrid(ids)
+            val uri = uriForImageId(ids.first())
+            Text("uri $uri")
         }
 
     }
