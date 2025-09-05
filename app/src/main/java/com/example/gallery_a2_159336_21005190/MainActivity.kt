@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Permission Gate - only works for READ_MEDIA_IMAGES
     @Composable
     fun ImagesPermissionGate(){
         val context = LocalContext.current
