@@ -1,8 +1,10 @@
 package com.example.gallery_a2_159336_21005190
 
 import android.Manifest
+import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -14,19 +16,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.gallery_a2_159336_21005190.ui.theme.Gallery_A2_159336_21005190Theme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +64,7 @@ class MainActivity : ComponentActivity() {
 
         // if permission UI
         if (hasPermission) {
-            GalleryGrid()
+            GalleryScreen()
         } else {
             Column(
                 modifier = Modifier
@@ -83,8 +86,48 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun GalleryGrid(){
-        Text("this is a gallery grid")
+    fun GalleryScreen(){
+        var ids by remember { mutableStateOf<List<Long>>(emptyList()) }
+        LaunchedEffect(Unit){
+            withContext(Dispatchers.IO){
+                ids = getImageIds(contentResolver)
+                println("Found ${ids.size} images, first ID = ${ids.firstOrNull()}")
+            }
+        }
+
+        if(ids.isEmpty()){
+            Text("No Images Found")
+        } else{
+            GalleryGrid(ids)
+        }
+
+    }
+
+    @Composable
+    fun GalleryGrid(ids: List<Long>){
+       Text("this is a gallery grid with ${ids.size} images")
+    }
+
+    fun getImageIds(contentResolver: ContentResolver): List<Long> {
+        val ids = mutableListOf<Long>()
+
+        val projection = arrayOf(MediaStore.Images.Media._ID)
+        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+        contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            null,
+            null,
+            sortOrder
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            while (cursor.moveToNext()) {
+                ids.add(cursor.getLong(idColumn))
+            }
+        }
+
+        return ids
     }
 }
 
