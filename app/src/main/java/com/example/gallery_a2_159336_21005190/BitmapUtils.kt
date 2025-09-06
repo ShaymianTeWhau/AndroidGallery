@@ -1,6 +1,7 @@
 package com.example.gallery_a2_159336_21005190
 
 import android.content.ContentResolver
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
@@ -40,5 +41,21 @@ fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeig
     }
 
     return inSampleSize
+}
+
+fun decodeWithSampleSize(
+    contentResolver: ContentResolver,
+    uri: Uri,
+    inSampleSize: Int
+): Bitmap? {
+    val opts = BitmapFactory.Options().apply {
+        this.inSampleSize = if (inSampleSize > 0) inSampleSize else 1
+        this.inJustDecodeBounds = false
+    }
+
+    // Open an InputStream and decode
+    return contentResolver.openInputStream(uri)?.use { input ->
+        BitmapFactory.decodeStream(input, null, opts)
+    }
 }
 
