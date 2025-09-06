@@ -5,6 +5,7 @@ import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -98,9 +99,20 @@ class MainActivity : ComponentActivity() {
         if(ids.isEmpty()){
             Text("No Images Found")
         } else{
-            //GalleryGrid(ids)
-            val uri = uriForImageId(ids.first())
-            Text("uri $uri")
+            LaunchedEffect(ids) {
+                withContext(Dispatchers.IO){
+                    //GalleryGrid(ids)
+                    val uri = uriForImageId(ids[0])
+                    val bounds = decodeBounds(contentResolver, uri)
+                    Log.d("Gallery", "uri=$uri")
+                    Log.d("Gallery", "mime=${contentResolver.getType(uri)}")
+                    Log.d("Gallery", "bounds=${bounds.outWidth} x ${bounds.outHeight}")
+                    contentResolver.openFileDescriptor(uri, "r")?.use { Log.d("Gallery", "pfd OK") }
+                }
+
+            }
+
+            //Text("uri $uri\nH:${bounds.outHeight} W:${bounds.outWidth}")
         }
 
     }
