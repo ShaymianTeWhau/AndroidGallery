@@ -108,6 +108,10 @@ class MainActivity : ComponentActivity() {
                     Log.d("Gallery", "mime=${contentResolver.getType(uri)}")
                     Log.d("Gallery", "bounds=${bounds.outWidth} x ${bounds.outHeight}")
                     contentResolver.openFileDescriptor(uri, "r")?.use { Log.d("Gallery", "pfd OK") }
+                    val reqWidth = 240
+                    val reqHeight = 180
+                    val sampleSize: Int = calculateInSampleSize(bounds, reqWidth, reqHeight)
+                    Log.d("Gallery", "inSampleSize=$sampleSize")
                 }
 
             }
