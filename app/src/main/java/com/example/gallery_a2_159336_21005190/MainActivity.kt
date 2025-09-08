@@ -3,7 +3,6 @@ package com.example.gallery_a2_159336_21005190
 import android.Manifest
 import android.content.ContentResolver
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -14,7 +13,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -45,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -134,18 +130,18 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun GalleryScreen(modifier: Modifier){
-        var ids by remember { mutableStateOf<List<Long>>(emptyList()) }
+        var photosData by remember { mutableStateOf<List<PhotoData>>(emptyList()) }
         LaunchedEffect(Unit){
             withContext(Dispatchers.IO){
-                ids = getImageIds(contentResolver)
-                println("Found ${ids.size} images, first ID = ${ids.firstOrNull()}")
+                photosData = getImagesData(contentResolver)
+                println("Found ${photosData.size} images")
             }
         }
 
-        if(ids.isEmpty()){
+        if(photosData.isEmpty()){
             Text("No Images Found")
         } else{
-            GalleryGrid(modifier = modifier, ids = ids)
+            GalleryGrid(modifier = modifier, photosData = photosData)
         }
 
     }
@@ -155,10 +151,10 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun GalleryGrid(
         modifier: Modifier,
-        ids: List<Long>,
+        photosData: List<PhotoData>,
         onImageClick: (Long) -> Unit = {}
     ){
-       Log.d("Gallery", "this is a gallery grid with ${ids.size} images")
+       Log.d("Gallery", "this is a gallery grid with ${photosData.size} images")
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             contentPadding = PaddingValues(8.dp),
@@ -167,16 +163,16 @@ class MainActivity : ComponentActivity() {
             modifier = modifier.fillMaxSize()
         ) {
             items(
-                items = ids,
-                key = { it } // stable key = imageId
-            ) { id ->
+                items = photosData,
+                key = { it.id } // stable key = imageId
+            ) { photo ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(4f / 3f)
-                        .clickable { onImageClick(id) }
+                        .clickable { onImageClick(photo.id) }
                 ) {
-                    Thumbnail(imageId = id)
+                    Thumbnail(imageId = photo.id)
                 }
             }
         }
@@ -201,10 +197,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun getImageIds(contentResolver: ContentResolver): List<Long> {
-        val ids = mutableListOf<Long>()
 
-        val projection = arrayOf(MediaStore.Images.Media._ID)
+    fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
+        val photoData = mutableListOf<PhotoData>()
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.ORIENTATION,
+            MediaStore.Images.Media.WIDTH,
+            MediaStore.Images.Media.HEIGHT
+            )
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         contentResolver.query(
@@ -215,12 +217,22 @@ class MainActivity : ComponentActivity() {
             sortOrder
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val orientationColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.ORIENTATION)
+            val widthColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
+            val heightColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
             while (cursor.moveToNext()) {
-                ids.add(cursor.getLong(idColumn))
+                photoData.add(
+                    PhotoData(
+                        id = cursor.getLong(idColumn),
+                        orientation = cursor.getInt(orientationColumn),
+                        width = cursor.getInt(widthColumn),
+                        height = cursor.getInt(heightColumn)
+                    )
+                )
             }
         }
 
-        return ids
+        return photoData
     }
 }
 
