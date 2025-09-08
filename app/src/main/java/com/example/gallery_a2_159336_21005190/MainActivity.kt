@@ -160,7 +160,7 @@ class MainActivity : ComponentActivity() {
     ){
        Log.d("Gallery", "this is a gallery grid with ${ids.size} images")
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 120.dp) ,
+            columns = GridCells.Fixed(3),
             contentPadding = PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -170,7 +170,6 @@ class MainActivity : ComponentActivity() {
                 items = ids,
                 key = { it } // stable key = imageId
             ) { id ->
-                // Keep a 4:3 box since your decode uses 240x180
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
