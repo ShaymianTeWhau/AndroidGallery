@@ -3,6 +3,8 @@ package com.example.gallery_a2_159336_21005190
 import android.Manifest
 import android.content.ContentResolver
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
@@ -172,20 +174,30 @@ class MainActivity : ComponentActivity() {
                         .aspectRatio(4f / 3f)
                         .clickable { onImageClick(photo.id) }
                 ) {
-                    Thumbnail(imageId = photo.id)
+                    Thumbnail(imageData = photo)
                 }
             }
         }
     }
 
     @Composable
-    fun Thumbnail(imageId: Long) {
+    fun Thumbnail(imageData: PhotoData) {
         val context = LocalContext.current
-        val bmp = remember(imageId) {
-            val uri = uriForImageId(imageId)
+        val bmp = remember(imageData) {
+            val uri = uriForImageId(imageData.id)
             val bounds = decodeBounds(context.contentResolver, uri)
             val sample = calculateInSampleSize(bounds, 240, 180)
-            decodeWithSampleSize(context.contentResolver, uri, sample)
+            val decoded = decodeWithSampleSize(context.contentResolver, uri, sample)
+
+            val orientation = imageData.orientation.toFloat()
+            decoded?.let{ bitmap ->
+                if(orientation != 0f){
+                    val matrix = Matrix().apply{ postRotate(orientation)}
+                    Bitmap.createBitmap(
+                        bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+                    )
+                } else bitmap
+            }
         }
         bmp?.let {
             Image(
