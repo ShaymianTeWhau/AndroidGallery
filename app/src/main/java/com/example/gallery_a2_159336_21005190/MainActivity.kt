@@ -7,17 +7,21 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,8 +46,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +58,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -155,33 +164,87 @@ class MainActivity : ComponentActivity() {
 
     }
 
-
-
     @Composable
     fun GalleryGrid(
-        modifier: Modifier,
+        modifier: Modifier = Modifier,
         photosData: List<PhotoData>,
         onImageClick: (Long) -> Unit = {}
-    ){
-       Log.d("Gallery", "this is a gallery grid with ${photosData.size} images")
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = modifier.fillMaxSize()
+    ) {
+        val minCols = 1
+        val maxCols = 3
+
+        var cols by rememberSaveable { mutableIntStateOf(2) }
+        var zoom by remember { mutableFloatStateOf(1f) }
+        var visualZoom by remember { mutableFloatStateOf(1f) }
+
+        val animatedZoom by animateFloatAsState(
+            targetValue = visualZoom,
+            animationSpec = SpringSpec(
+                stiffness = Spring.StiffnessMedium,
+                dampingRatio = Spring.DampingRatioNoBouncy
+            ),
+            label = "gridZoom"
+        )
+
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = animatedZoom
+                    scaleY = animatedZoom
+                }
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(pass = PointerEventPass.Initial)
+                        do {
+                            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                            val zoomChange = event.calculateZoom()
+                            if (zoomChange != 1f) {
+                                zoom *= zoomChange
+
+                                visualZoom = (visualZoom * zoomChange).coerceIn(0.8f, 1.20f)
+
+                                // Pinch out
+                                if (zoom >= 1.5f && cols > minCols) {
+                                    cols = (cols - 1).coerceAtLeast(minCols)
+                                    zoom = 1f
+                                    visualZoom = 1f
+                                }
+                                // Pinch in
+                                if (zoom <= 0.7f && cols < maxCols) {
+                                    cols = (cols + 1).coerceAtMost(maxCols)
+                                    zoom = 1f
+                                    visualZoom = 1f
+                                }
+
+                                event.changes.forEach { it.consume() }
+                            }
+                        } while (event.changes.any { it.pressed })
+                        // Reset
+                        zoom = 1f
+                        visualZoom = 1f
+                    }
+                }
         ) {
-            items(
-                items = photosData,
-                key = { it.id } // stable key = imageId
-            ) { photo ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(4f / 3f)
-                        .clickable { onImageClick(photo.id) }
-                ) {
-                    Thumbnail(imageData = photo)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(cols),
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(
+                    items = photosData,
+                    key = { it.id }
+                ) { photo ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(4f / 3f)
+                            .clickable { onImageClick(photo.id) }
+                    ) {
+                        Thumbnail(imageData = photo)
+                    }
                 }
             }
         }
