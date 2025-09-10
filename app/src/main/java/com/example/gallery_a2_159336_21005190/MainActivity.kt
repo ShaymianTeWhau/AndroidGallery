@@ -13,6 +13,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,13 +47,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.gallery_a2_159336_21005190.ui.theme.Gallery_A2_159336_21005190Theme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
@@ -158,7 +165,7 @@ class MainActivity : ComponentActivity() {
     ){
        Log.d("Gallery", "this is a gallery grid with ${photosData.size} images")
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -183,32 +190,74 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun Thumbnail(imageData: PhotoData) {
         val context = LocalContext.current
-        val bmp = remember(imageData) {
-            val uri = uriForImageId(imageData.id)
-            val bounds = decodeBounds(context.contentResolver, uri)
-            val sample = calculateInSampleSize(bounds, 240, 180)
-            val decoded = decodeWithSampleSize(context.contentResolver, uri, sample)
 
-            val orientation = imageData.orientation.toFloat()
-            decoded?.let{ bitmap ->
-                if(orientation != 0f){
-                    val matrix = Matrix().apply{ postRotate(orientation)}
-                    Bitmap.createBitmap(
-                        bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-                    )
-                } else bitmap
+        val bmpState = remember(imageData.id) { mutableStateOf<Bitmap?>(null) }
+
+        // Decode off the main thread
+        LaunchedEffect(imageData.id) {
+            bmpState.value = withContext(Dispatchers.IO) {
+                val uri = uriForImageId(imageData.id)
+                val bounds = decodeBounds(context.contentResolver, uri)
+                val sample = calculateInSampleSize(bounds, 240, 180)
+                val decoded = decodeWithSampleSize(context.contentResolver, uri, sample)
+
+                val orientation = imageData.orientation.toFloat()
+                decoded?.let { bitmap ->
+                    if (orientation != 0f) {
+                        val matrix = Matrix().apply { postRotate(orientation) }
+                        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                    } else bitmap
+                }
             }
         }
-        bmp?.let {
+
+        // launch animations when bitmap is loaded
+        var visible by remember(imageData.id) { mutableStateOf(false) }
+        LaunchedEffect(bmpState.value) {
+            if (bmpState.value != null) {
+                delay((imageData.id % 16) * 40L)
+                visible = true
+            }
+        }
+
+        // Animations
+        // animate scale
+        val scale by animateFloatAsState(
+            targetValue = if (visible) 1f else 0.1f,
+            animationSpec = tween(900, easing = LinearOutSlowInEasing),
+            label = "thumb-scale"
+        )
+
+        // animate alpha
+        val alpha by animateFloatAsState(
+            targetValue = if(visible) 1f else 0.1f,
+            animationSpec = tween(900),
+            label = "fade-in"
+        )
+
+        // animate greyscale
+        val saturation by animateFloatAsState(
+            targetValue = if (visible) 1f else 0f,
+            animationSpec = tween(900),
+            label = "thumb-saturation"
+        )
+
+        val bmp = bmpState.value
+        bmp?.let { bitmap ->
             Image(
-                bitmap = it.asImageBitmap(),
+                bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(scaleX = scale, scaleY = scale),
+                contentScale = ContentScale.Crop,
+                colorFilter = ColorFilter.colorMatrix(
+                    ColorMatrix().apply { setToSaturation(saturation) }
+                ),
+                alpha = alpha
             )
         }
     }
-
 
     fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
         val photoData = mutableListOf<PhotoData>()
