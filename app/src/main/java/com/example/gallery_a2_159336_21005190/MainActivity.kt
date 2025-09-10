@@ -16,7 +16,9 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -239,6 +241,12 @@ class MainActivity : ComponentActivity() {
                 ) { photo ->
                     Box(
                         modifier = Modifier
+                            .animateItem(
+                                fadeInSpec = null, fadeOutSpec = null, placementSpec = spring(
+                                    stiffness = Spring.StiffnessMedium,
+                                    dampingRatio = Spring.DampingRatioNoBouncy
+                                )
+                            )
                             .padding(0.dp)
                             .fillMaxWidth()
                             .aspectRatio(4f / 3f)
