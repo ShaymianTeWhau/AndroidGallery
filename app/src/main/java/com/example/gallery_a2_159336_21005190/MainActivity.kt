@@ -228,9 +228,9 @@ class MainActivity : ComponentActivity() {
         ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(cols),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(0.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
@@ -239,6 +239,7 @@ class MainActivity : ComponentActivity() {
                 ) { photo ->
                     Box(
                         modifier = Modifier
+                            .padding(0.dp)
                             .fillMaxWidth()
                             .aspectRatio(4f / 3f)
                             .clickable { onImageClick(photo.id) }
