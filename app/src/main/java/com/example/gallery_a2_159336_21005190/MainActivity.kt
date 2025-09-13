@@ -277,6 +277,7 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
 
         val bmpState = remember(imageData.id) { mutableStateOf<Bitmap?>(null) }
+        var fromCache by remember(imageData.id){ mutableStateOf(false) }
 
         val targetW = 240
         val targetH = 180
@@ -290,8 +291,9 @@ class MainActivity : ComponentActivity() {
                 // Try get bitmap from cache first
                 val cached = memoryCache.get(cacheKey)
 
-                memoryCache.get(cacheKey)?.let{ cached ->
-                    return@withContext cached
+                memoryCache.get(cacheKey)?.let{
+                    fromCache = true
+                    return@withContext it
                 }
 
                 val uri = uriForImageId(imageData.id)
@@ -318,25 +320,34 @@ class MainActivity : ComponentActivity() {
         var visible by remember(imageData.id) { mutableStateOf(false) }
         LaunchedEffect(bmpState.value) {
             if (bmpState.value != null) {
-                delay((imageData.id % 16) * 40L)
+                if (fromCache){
+                    Log.d("Gallery", "Loading ${imageData.id} from cache")
+                    delay((imageData.id % 16) * 40L)
+                }
+
                 visible = true
             }
         }
 
         // Animations
         // animate scale
-        val scale by animateFloatAsState(
-            targetValue = if (visible) 1f else 0.1f,
-            animationSpec = tween(900, easing = LinearOutSlowInEasing),
-            label = "thumb-scale"
-        )
+        val scale =
+            if(!fromCache)
+                animateFloatAsState(
+                    targetValue = if (visible) 1f else 0.1f,
+                    animationSpec = tween(900, easing = LinearOutSlowInEasing),
+                    label = "thumb-scale").value
+            else 1f
 
         // animate alpha
-        val alpha by animateFloatAsState(
-            targetValue = if(visible) 1f else 0.1f,
-            animationSpec = tween(900),
-            label = "fade-in"
-        )
+        val alpha =
+            if(!fromCache)
+                animateFloatAsState(
+                    targetValue = if(visible) 1f else 0.1f,
+                    animationSpec = tween(900),
+                    label = "fade-in"
+                ).value
+            else 1f
 
         // animate greyscale
         val saturation by animateFloatAsState(
