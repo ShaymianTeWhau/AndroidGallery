@@ -7,18 +7,19 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.collection.LruCache
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -72,8 +73,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    private lateinit var memoryCache: LruCache<String, Bitmap>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // initialize cache
+        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+        val cacheSize = maxMemory / 8
+        memoryCache = object  : LruCache<String, Bitmap>(cacheSize){
+            override fun sizeOf(key: String, value: Bitmap): Int {
+                return value.byteCount / 1024
+            }
+        }
+
         enableEdgeToEdge()
         setContent {
             Gallery_A2_159336_21005190Theme {
@@ -265,21 +278,39 @@ class MainActivity : ComponentActivity() {
 
         val bmpState = remember(imageData.id) { mutableStateOf<Bitmap?>(null) }
 
+        val targetW = 240
+        val targetH = 180
+        val cacheKey = remember(key1 = imageData.id, key2 = imageData.orientation){
+            "${imageData.id}-${targetW}x${targetH}-rot${imageData.orientation}"
+        }
         // Decode off the main thread
         LaunchedEffect(imageData.id) {
             bmpState.value = withContext(Dispatchers.IO) {
+
+                // Try get bitmap from cache first
+                val cached = memoryCache.get(cacheKey)
+
+                memoryCache.get(cacheKey)?.let{ cached ->
+                    return@withContext cached
+                }
+
                 val uri = uriForImageId(imageData.id)
                 val bounds = decodeBounds(context.contentResolver, uri)
-                val sample = calculateInSampleSize(bounds, 240, 180)
+                val sample = calculateInSampleSize(bounds, targetW, targetH)
                 val decoded = decodeWithSampleSize(context.contentResolver, uri, sample)
 
                 val orientation = imageData.orientation.toFloat()
-                decoded?.let { bitmap ->
+                val result = decoded?.let { bitmap ->
                     if (orientation != 0f) {
                         val matrix = Matrix().apply { postRotate(orientation) }
                         Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                     } else bitmap
                 }
+
+                // put processed bitmap into cache
+                result?.let{bmp -> memoryCache.put(cacheKey, bmp)}
+
+                return@withContext result
             }
         }
 
