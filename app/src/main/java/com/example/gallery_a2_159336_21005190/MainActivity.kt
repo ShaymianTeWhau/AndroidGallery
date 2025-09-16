@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             Gallery_A2_159336_21005190Theme {
                 Scaffold (
-                    topBar = {GalleryAppBar()}
+                    topBar = {GalleryAppBar(onRefresh = { viewModel.refresh(contentResolver) })}
                 ){ innerPadding ->
                     ImagesPermissionGate(
                         modifier = Modifier.padding(innerPadding)
@@ -93,11 +93,11 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun GalleryAppBar(){
+    fun GalleryAppBar(onRefresh: () -> Unit){
         TopAppBar(
             title = {Text("Gallery")},
             actions = {
-                IconButton(onClick = {}){
+                IconButton(onClick = onRefresh){
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh"

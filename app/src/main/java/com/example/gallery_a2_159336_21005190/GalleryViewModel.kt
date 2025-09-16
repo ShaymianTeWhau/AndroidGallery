@@ -3,12 +3,14 @@ package com.example.gallery_a2_159336_21005190
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.provider.MediaStore
+import android.util.Log
 import androidx.collection.LruCache
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class GalleryViewModel : ViewModel(){
 
@@ -85,5 +87,15 @@ class GalleryViewModel : ViewModel(){
 
     fun putInCache(key: String, bmp: Bitmap) {
         memoryCache.put(key, bmp)
+    }
+
+    fun refresh(contentResolver: ContentResolver) {
+        viewModelScope.launch(Dispatchers.IO) {
+            memoryCache.evictAll()
+            val newPhotos = getImagesData(contentResolver)
+            withContext(Dispatchers.Main){
+                photos.value = newPhotos
+            }
+        }
     }
 }
