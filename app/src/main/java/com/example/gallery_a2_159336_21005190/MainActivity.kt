@@ -91,6 +91,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refresh(contentResolver)
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun GalleryAppBar(onRefresh: () -> Unit){
