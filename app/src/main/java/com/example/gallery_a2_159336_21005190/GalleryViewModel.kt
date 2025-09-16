@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.provider.MediaStore
 import androidx.collection.LruCache
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
