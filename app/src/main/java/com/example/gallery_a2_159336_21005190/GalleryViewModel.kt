@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.provider.MediaStore
 import androidx.collection.LruCache
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,6 +22,7 @@ class GalleryViewModel : ViewModel(){
         initCache()
     }
 
+    // cache functions
     private fun initCache(){
         // initialize cache
         val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
@@ -32,6 +34,8 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
+    fun cacheKey(id: Long, w: Int, h: Int, orientation: Int): String = "$id-${w}x$h-rot$orientation"
+
     fun loadImages(contentResolver: ContentResolver){
         viewModelScope.launch(Dispatchers.IO){
             photos.value = getImagesData(contentResolver)
@@ -39,7 +43,7 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
-    fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
+    private fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
         val photoData = mutableListOf<PhotoData>()
 
         val projection = arrayOf(
@@ -74,5 +78,13 @@ class GalleryViewModel : ViewModel(){
         }
 
         return photoData
+    }
+
+    fun getFromCache(key: String): Bitmap? {
+        return memoryCache.get(key)
+    }
+
+    fun putInCache(key: String, bmp: Bitmap) {
+        memoryCache.put(key, bmp)
     }
 }

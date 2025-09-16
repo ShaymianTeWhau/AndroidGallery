@@ -74,7 +74,6 @@ import kotlinx.coroutines.withContext
 import androidx.activity.viewModels
 
 class MainActivity : ComponentActivity() {
-    // private lateinit var memorycache: lrucache<string, bitmap>
     private val viewModel: GalleryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -268,16 +267,14 @@ class MainActivity : ComponentActivity() {
         val targetW = 240
         val targetH = 180
         val cacheKey = remember(key1 = imageData.id, key2 = imageData.orientation){
-            "${imageData.id}-${targetW}x${targetH}-rot${imageData.orientation}"
+            viewModel.cacheKey(imageData.id, targetW, targetH, imageData.orientation)
         }
         // Decode off the main thread
         LaunchedEffect(imageData.id) {
             bmpState.value = withContext(Dispatchers.IO) {
 
                 // Try get bitmap from cache first
-                val cached = viewModel.memoryCache.get(cacheKey)
-
-                viewModel.memoryCache.get(cacheKey)?.let{
+                viewModel.getFromCache(cacheKey)?.let{
                     fromCache = true
                     return@withContext it
                 }
@@ -296,7 +293,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // put processed bitmap into cache
-                result?.let{bmp -> viewModel.memoryCache.put(cacheKey, bmp)}
+                result?.let{bmp -> viewModel.putInCache(cacheKey, bmp)}
 
                 return@withContext result
             }
