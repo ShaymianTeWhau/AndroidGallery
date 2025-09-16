@@ -74,20 +74,12 @@ import kotlinx.coroutines.withContext
 import androidx.activity.viewModels
 
 class MainActivity : ComponentActivity() {
-    private lateinit var memoryCache: LruCache<String, Bitmap>
+    // private lateinit var memorycache: lrucache<string, bitmap>
     private val viewModel: GalleryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // initialize cache
-        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-        val cacheSize = maxMemory / 8
-        memoryCache = object  : LruCache<String, Bitmap>(cacheSize){
-            override fun sizeOf(key: String, value: Bitmap): Int {
-                return value.byteCount / 1024
-            }
-        }
 
         enableEdgeToEdge()
         setContent {
@@ -283,9 +275,9 @@ class MainActivity : ComponentActivity() {
             bmpState.value = withContext(Dispatchers.IO) {
 
                 // Try get bitmap from cache first
-                val cached = memoryCache.get(cacheKey)
+                val cached = viewModel.memoryCache.get(cacheKey)
 
-                memoryCache.get(cacheKey)?.let{
+                viewModel.memoryCache.get(cacheKey)?.let{
                     fromCache = true
                     return@withContext it
                 }
@@ -304,7 +296,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // put processed bitmap into cache
-                result?.let{bmp -> memoryCache.put(cacheKey, bmp)}
+                result?.let{bmp -> viewModel.memoryCache.put(cacheKey, bmp)}
 
                 return@withContext result
             }

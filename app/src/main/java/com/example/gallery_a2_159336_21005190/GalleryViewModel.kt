@@ -1,7 +1,9 @@
 package com.example.gallery_a2_159336_21005190
 
 import android.content.ContentResolver
+import android.graphics.Bitmap
 import android.provider.MediaStore
+import androidx.collection.LruCache
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,8 +12,25 @@ import kotlinx.coroutines.launch
 
 class GalleryViewModel : ViewModel(){
 
+    lateinit var memoryCache: LruCache<String, Bitmap>
+
     var photos = mutableStateOf<List<PhotoData>>(emptyList())
         private set
+
+    init {
+        initCache()
+    }
+
+    private fun initCache(){
+        // initialize cache
+        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+        val cacheSize = maxMemory / 8
+        memoryCache = object  : LruCache<String, Bitmap>(cacheSize){
+            override fun sizeOf(key: String, value: Bitmap): Int {
+                return value.byteCount / 1024
+            }
+        }
+    }
 
     fun loadImages(contentResolver: ContentResolver){
         viewModelScope.launch(Dispatchers.IO){
