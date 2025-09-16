@@ -2,6 +2,7 @@ package com.example.gallery_a2_159336_21005190
 
 import android.content.ContentResolver
 import android.provider.MediaStore
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -9,12 +10,13 @@ import kotlinx.coroutines.launch
 
 class GalleryViewModel : ViewModel(){
 
-    var photos = mutableListOf<List<PhotoData>>(emptyList())
+    var photos = mutableStateOf<List<PhotoData>>(emptyList())
         private set
 
     fun loadImages(contentResolver: ContentResolver){
         viewModelScope.launch(Dispatchers.IO){
-
+            photos.value = getImagesData(contentResolver)
+            println("Found ${photos.value.size} images")
         }
     }
 

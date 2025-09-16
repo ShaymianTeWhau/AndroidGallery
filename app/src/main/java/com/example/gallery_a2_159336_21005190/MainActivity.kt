@@ -165,20 +165,12 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun GalleryScreen(modifier: Modifier){
-        var photosData by remember { mutableStateOf<List<PhotoData>>(emptyList()) }
-        LaunchedEffect(Unit){
-            withContext(Dispatchers.IO){
-                photosData = viewModel.getImagesData(contentResolver)
-                println("Found ${photosData.size} images")
-            }
-        }
-
-        if(photosData.isEmpty()){
+        viewModel.loadImages(contentResolver)
+        if(viewModel.photos.value.isEmpty()){
             Text("No Images Found")
         } else{
-            GalleryGrid(modifier = modifier, photosData = photosData)
+            GalleryGrid(modifier = modifier, photosData = viewModel.photos.value)
         }
-
     }
 
     @Composable
