@@ -71,9 +71,11 @@ import com.example.gallery_a2_159336_21005190.ui.theme.Gallery_A2_159336_2100519
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.activity.viewModels
 
 class MainActivity : ComponentActivity() {
     private lateinit var memoryCache: LruCache<String, Bitmap>
+    private val viewModel: GalleryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
