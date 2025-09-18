@@ -1,6 +1,7 @@
 package com.example.gallery_a2_159336_21005190
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -228,6 +229,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
         ) {
+            val context = LocalContext.current
             LazyVerticalGrid(
                 columns = GridCells.Fixed(cols),
                 contentPadding = PaddingValues(0.dp),
@@ -250,7 +252,12 @@ class MainActivity : ComponentActivity() {
                             .padding(0.dp)
                             .fillMaxWidth()
                             .aspectRatio(4f / 3f)
-                            .clickable { onImageClick(photo.id) }
+                            .clickable {
+                                val intent = Intent(context, PhotoActivity::class.java)
+                                intent.putExtra("PHOTO_ID", photo.id)
+                                context.startActivity(intent)
+                                onImageClick(photo.id)
+                            }
                     ) {
                         Thumbnail(imageData = photo)
                     }
