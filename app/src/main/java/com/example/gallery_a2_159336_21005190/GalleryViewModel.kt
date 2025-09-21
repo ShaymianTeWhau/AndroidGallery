@@ -45,7 +45,7 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
-    private fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
+    fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
         val photoData = mutableListOf<PhotoData>()
 
         val projection = arrayOf(
