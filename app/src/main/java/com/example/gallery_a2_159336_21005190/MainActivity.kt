@@ -280,32 +280,14 @@ class MainActivity : ComponentActivity() {
         }
         // Decode off the main thread
         LaunchedEffect(imageData.id) {
-            bmpState.value = withContext(Dispatchers.IO) {
-
-                // Try get bitmap from cache first
-                viewModel.getFromCache(cacheKey)?.let{
-                    fromCache = true
-                    return@withContext it
-                }
-
-                val uri = uriForImageId(imageData.id)
-                val bounds = decodeBounds(context.contentResolver, uri)
-                val sample = calculateInSampleSize(bounds, targetW, targetH)
-                val decoded = decodeWithSampleSize(context.contentResolver, uri, sample)
-
-                val orientation = imageData.orientation.toFloat()
-                val result = decoded?.let { bitmap ->
-                    if (orientation != 0f) {
-                        val matrix = Matrix().apply { postRotate(orientation) }
-                        Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                    } else bitmap
-                }
-
-                // put processed bitmap into cache
-                result?.let{bmp -> viewModel.putInCache(cacheKey, bmp)}
-
-                return@withContext result
-            }
+            val result = viewModel.loadPhoto(
+                image = imageData,
+                targetW = targetW,
+                targetH = targetH,
+                resolver = context.contentResolver
+            )
+            fromCache = result.fromCache
+            bmpState.value = result.bitmap
         }
 
         // launch animations when bitmap is loaded

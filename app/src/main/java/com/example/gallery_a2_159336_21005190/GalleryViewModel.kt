@@ -2,6 +2,7 @@ package com.example.gallery_a2_159336_21005190
 
 import android.content.ContentResolver
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.provider.MediaStore
 import android.util.Log
 import androidx.collection.LruCache
@@ -98,4 +99,33 @@ class GalleryViewModel : ViewModel(){
             }
         }
     }
+
+    suspend fun loadPhoto(
+        image: PhotoData,
+        targetW: Int,
+        targetH: Int,
+        resolver: ContentResolver
+    ): PhotoLoad = withContext(Dispatchers.IO) {
+        val key = cacheKey(image.id, targetW, targetH, image.orientation)
+
+        getFromCache(key)?.let { return@withContext PhotoLoad(it, fromCache = true) }
+
+        val uri = uriForImageId(image.id)
+        val bounds = decodeBounds(resolver, uri)
+        val sample = calculateInSampleSize(bounds, targetW, targetH)
+        val decoded = decodeWithSampleSize(resolver, uri, sample)
+
+        val deg = image.orientation.toFloat()
+        val rotated = decoded?.let { bmp ->
+            if (deg != 0f) Bitmap.createBitmap(
+                bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(deg) }, true
+            ) else bmp
+        }
+
+        rotated?.let { putInCache(key, it) }
+        PhotoLoad(rotated, fromCache = false)
+    }
+
 }
+
+data class PhotoLoad(val bitmap: Bitmap?, val fromCache: Boolean)
