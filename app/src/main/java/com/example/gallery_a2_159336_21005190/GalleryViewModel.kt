@@ -90,12 +90,13 @@ class GalleryViewModel : ViewModel(){
         memoryCache.put(key, bmp)
     }
 
-    fun refresh(contentResolver: ContentResolver) {
+    fun refresh(resolver: ContentResolver) {
         viewModelScope.launch(Dispatchers.IO) {
-            memoryCache.evictAll()
-            val newPhotos = getImagesData(contentResolver)
-            withContext(Dispatchers.Main){
-                photos.value = newPhotos
+            try {
+                val list = getImagesData(resolver)
+                photos.value = list
+            } catch (se: SecurityException) {
+                Log.w("Gallery", "No permission to read images yet.", se)
             }
         }
     }

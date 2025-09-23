@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -115,14 +116,21 @@ class MainActivity : ComponentActivity() {
 
     // Permission Gate - only works for READ_MEDIA_IMAGES
     @Composable
-    fun ImagesPermissionGate(modifier: Modifier){
+    fun ImagesPermissionGate(modifier: Modifier) {
         val context = LocalContext.current
-        val permission = Manifest.permission.READ_MEDIA_IMAGES
+
+        // Pick the right permission for the device's API level
+        val readPermission =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                Manifest.permission.READ_MEDIA_IMAGES
+            else
+                Manifest.permission.READ_EXTERNAL_STORAGE
 
         // current permission state
         var hasPermission by remember {
             mutableStateOf(
-                ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(context, readPermission) ==
+                        PackageManager.PERMISSION_GRANTED
             )
         }
 
@@ -133,7 +141,12 @@ class MainActivity : ComponentActivity() {
             hasPermission = granted
         }
 
-        // if permission UI
+        LaunchedEffect(hasPermission) {
+            if (hasPermission) {
+                viewModel.refresh(context.contentResolver)
+            }
+        }
+
         if (hasPermission) {
             GalleryScreen(modifier = modifier)
         } else {
@@ -149,7 +162,7 @@ class MainActivity : ComponentActivity() {
                     style = MaterialTheme.typography.titleMedium
                 )
                 Button(
-                    onClick = { requestPermission.launch(permission) }
+                    onClick = { requestPermission.launch(readPermission) }
                 ) {
                     Text("Allow images access")
                 }
