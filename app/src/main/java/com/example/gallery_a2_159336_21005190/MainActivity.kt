@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    // Permission Gate - only works for READ_MEDIA_IMAGES
+    // Permission Gate
     @Composable
     fun ImagesPermissionGate(modifier: Modifier) {
         val context = LocalContext.current
@@ -138,6 +138,7 @@ class MainActivity : ComponentActivity() {
             hasPermission = granted
         }
 
+        // do refresh when we have permission
         LaunchedEffect(hasPermission) {
             if (hasPermission) {
                 viewModel.refresh(context.contentResolver)
@@ -285,9 +286,7 @@ class MainActivity : ComponentActivity() {
 
         val targetW = 240
         val targetH = 180
-        val cacheKey = remember(key1 = imageData.id, key2 = imageData.orientation){
-            viewModel.cacheKey(imageData.id, targetW, targetH, imageData.orientation)
-        }
+
         // Decode off the main thread
         LaunchedEffect(imageData.id) {
             val result = viewModel.loadPhoto(

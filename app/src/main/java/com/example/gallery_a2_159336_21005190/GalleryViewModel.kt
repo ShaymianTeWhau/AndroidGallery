@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 
 class GalleryViewModel : ViewModel(){
 
+    // cache for storing bitmaps
     lateinit var memoryCache: LruCache<String, Bitmap>
 
     var photos = mutableStateOf<List<PhotoData>>(emptyList())
@@ -28,7 +29,11 @@ class GalleryViewModel : ViewModel(){
     private fun initCache(){
         // initialize cache
         val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+
+        // use 1/8th of the available memory for cache size
         val cacheSize = maxMemory / 8
+
+        // create LruCache
         memoryCache = object  : LruCache<String, Bitmap>(cacheSize){
             override fun sizeOf(key: String, value: Bitmap): Int {
                 return value.byteCount / 1024
@@ -36,8 +41,10 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
+    // create unique cache key for image
     fun cacheKey(id: Long, w: Int, h: Int, orientation: Int): String = "$id-${w}x$h-rot$orientation"
 
+    // load images from device storage
     fun loadImages(contentResolver: ContentResolver){
         viewModelScope.launch(Dispatchers.IO){
             photos.value = getImagesData(contentResolver)
@@ -45,17 +52,22 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
+    // fetch image data from MediaStore
     fun getImagesData(contentResolver: ContentResolver): List<PhotoData> {
         val photoData = mutableListOf<PhotoData>()
 
+        // columns we want
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.ORIENTATION,
             MediaStore.Images.Media.WIDTH,
             MediaStore.Images.Media.HEIGHT
         )
+
+        // sort images, newest first
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
+        // query MediaStore
         contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             projection,
@@ -90,9 +102,11 @@ class GalleryViewModel : ViewModel(){
         memoryCache.put(key, bmp)
     }
 
+    // refresh gallery images
     fun refresh(resolver: ContentResolver) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // fetch images from MediaStore
                 val list = getImagesData(resolver)
                 photos.value = list
             } catch (se: SecurityException) {
@@ -101,21 +115,27 @@ class GalleryViewModel : ViewModel(){
         }
     }
 
+    // loads from cache if available, otherwise from storage
     suspend fun loadPhoto(
         image: PhotoData,
         targetW: Int,
         targetH: Int,
         resolver: ContentResolver
     ): PhotoLoad = withContext(Dispatchers.IO) {
+
+        // generate unique key
         val key = cacheKey(image.id, targetW, targetH, image.orientation)
 
+        // of photo is cached, return it
         getFromCache(key)?.let { return@withContext PhotoLoad(it, fromCache = true) }
 
+        // decode
         val uri = uriForImageId(image.id)
         val bounds = decodeBounds(resolver, uri)
         val sample = calculateInSampleSize(bounds, targetW, targetH)
         val decoded = decodeWithSampleSize(resolver, uri, sample)
 
+        // apply orientation if applicable
         val deg = image.orientation.toFloat()
         val rotated = decoded?.let { bmp ->
             if (deg != 0f) Bitmap.createBitmap(
@@ -123,10 +143,13 @@ class GalleryViewModel : ViewModel(){
             ) else bmp
         }
 
+        // cache the bitmap
         rotated?.let { putInCache(key, it) }
+
         PhotoLoad(rotated, fromCache = false)
     }
 
 }
 
+// helper class for loadPhoto()
 data class PhotoLoad(val bitmap: Bitmap?, val fromCache: Boolean)

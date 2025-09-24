@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 
+// get full URI for image
 fun uriForImageId(imageId: Long): Uri {
     return Uri.withAppendedPath(
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,

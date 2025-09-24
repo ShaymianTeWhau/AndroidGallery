@@ -1,5 +1,6 @@
 package com.example.gallery_a2_159336_21005190
 
+// Class for photo data
 data class PhotoData(
     val id: Long,
     val orientation: Int,
